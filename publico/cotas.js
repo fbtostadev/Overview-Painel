@@ -455,11 +455,26 @@ function aplicarGrupo(card) {
 }
 
 /* ---------- desenho ---------- */
-var grade = null, ultimoJson = null;
+var grade = null, ultimoJson = null, grupoAgy = null;
+/* As contas do Antigravity (uma casa por conta) ficam num grupo só, com o título e a conta de quantas são. Com uma só, o card
+   fica solto na grade, como os demais. */
+function criarGrupoAgy() {
+  var no = document.createElement("section");
+  no.className = "contas-grupo";
+  no.setAttribute("data-ferramenta", "agy");
+  no.setAttribute("role", "group");
+  no.setAttribute("aria-label", "Antigravity");
+  no.innerHTML = '<h3 class="grupo-titulo"><span class="grupo-nome">Antigravity</span><span class="grupo-qtd"></span></h3><div class="contas-grade grupo-grade"></div>';
+  return { no: no, qtd: no.querySelector(".grupo-qtd"), grade: no.querySelector(".grupo-grade") };
+}
+function posicionar(pai, filhos) {
+  filhos.forEach(function (f, i) { if (pai.children[i] !== f) pai.insertBefore(f, pai.children[i] || null); });
+  while (pai.children.length > filhos.length) pai.lastElementChild.remove();
+}
 function desenhar(contas, agoraS) {
   var secao = document.getElementById("contas");
   if (!secao) return;
-  grade = grade || secao.querySelector(".contas-grade");
+  grade = grade || secao.querySelector("#contas-grade");
   var aviso = secao.querySelector(".aviso-contas");
   contas = contas || { consultadas: false, lista: [] };
   var lista = Array.isArray(contas.lista) ? contas.lista : [];
@@ -467,13 +482,12 @@ function desenhar(contas, agoraS) {
   if (json !== ultimoJson) {
     ultimoJson = json;
     var presentes = {};
-    lista.forEach(function (c, i) {
+    lista.forEach(function (c) {
       var id = c.id;
       presentes[id] = 1;
       var card = cards[id];
       if (!card) { card = cards[id] = criarCard(c); }
       card.conta = c;
-      if (grade.children[i] !== card.slot) grade.insertBefore(card.slot, grade.children[i] || null);
       atributo(card.no, "data-ferramenta", c.ferramenta || "");
       atributo(card.no, "aria-busy", c.consultando ? "true" : "false");
       texto(card.titulo, c.ferramenta_nome || "conta");
@@ -481,6 +495,15 @@ function desenhar(contas, agoraS) {
       sincronizarBarras(card, Array.isArray(c.barras) ? c.barras : []);
     });
     Object.keys(cards).forEach(function (id) { if (!presentes[id]) { removerCard(cards[id]); delete cards[id]; } });
+    var agrupa = lista.filter(function (c) { return c.ferramenta === "agy"; }).length > 1;
+    if (agrupa && !grupoAgy) grupoAgy = criarGrupoAgy();
+    var naGrade = [], noGrupo = [];
+    lista.forEach(function (c) {
+      if (agrupa && c.ferramenta === "agy") { if (!noGrupo.length) naGrade.push(grupoAgy.no); noGrupo.push(cards[c.id].slot); }
+      else naGrade.push(cards[c.id].slot);
+    });
+    posicionar(grade, naGrade);
+    if (grupoAgy) { posicionar(grupoAgy.grade, noGrupo); texto(grupoAgy.qtd, noGrupo.length + " contas"); }
     var mensagem = "";
     if (!contas.consultadas) mensagem = "A consulta às CLIs está desligada (coletor --sem-contas): as cotas vêm só das status lines.";
     else if (!lista.length) mensagem = "Nenhuma conta em execução no canvas" + (contas.canvas ? " " + contas.canvas : "") + ".";

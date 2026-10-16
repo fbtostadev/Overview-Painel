@@ -23,6 +23,13 @@ html[data-tema="escuro"] #contas { --c-sup: #1a1a19; --c-fio: #43433e; --c-etiqu
 .contas-grade[hidden] { display: none; }
 @media (max-width: 1100px) { .contas-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .contas-grade { grid-template-columns: 1fr; } }
+/* O grupo das contas do Antigravity: ocupa a linha inteira e traz os cards numa grade igual à de fora. */
+#contas-grade { grid-auto-rows: auto; }
+.card-slot { height: 280px; }
+.contas-grupo { grid-column: 1 / -1; min-width: 0; padding: 10px 10px 12px; border: 1px solid var(--fio-forte); border-radius: 20px; }
+.grupo-titulo { display: flex; align-items: baseline; gap: 8px; margin: 0 0 10px 6px; font-size: 12px; font-weight: 600; color: var(--tinta); }
+.grupo-qtd { font-weight: 400; color: var(--apagado); }
+.grupo-grade { padding: 0; }
 
 /* Todo card tem a mesma altura fixa (a da linha da grade): nada cresce, encolhe nem sobrepõe. */
 .card-slot { position: relative; display: grid; min-width: 0; will-change: transform; }

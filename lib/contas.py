@@ -46,6 +46,26 @@ PROVISORIA_FOLGA_S = 60                        # folga, em segundos, para dizer 
 
 # ---------------------------------------------------------------- descoberta
 
+def _pids_de_daemons():
+    """Pids dos `codex app-server daemon`: processos de apoio que ficam no ambiente em que subiram (o CODEX_HOME de
+    uma conta antiga, por exemplo) e não são a CLI que o terminal usa agora."""
+    saida = subprocess.run(["/bin/ps", "-axo", "pid=,comm="], stdout=subprocess.PIPE, universal_newlines=True,
+                           check=True, timeout=10).stdout
+    return {int(p) for p, _, comando in (l.strip().partition(" ") for l in saida.splitlines())
+            if p.isdigit() and "/app-server-daemon/" in comando}
+
+
+def ler_processos(leitor=discovery.read_processes, daemons=_pids_de_daemons):
+    """Os processos das CLIs, sem os daemons do Codex. Num terminal em que a conta do Codex mudou, o daemon velho
+    e a CLI nova davam duas identidades, a descoberta desistia e o card da conta sumia."""
+    processos = leitor()
+    try:
+        fora = daemons()
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return processos
+    return [p for p in processos if p["pid"] not in fora]
+
+
 class DescobertaDoCanvas(discovery.MaestriDiscovery):
     """Os terminais do canvas com o nome do mapa, e não o canvas ativo: o dono do painel alterna entre canvases
     (Equipe e Outro), e o painel é de um só. Sem nome, ou nome não encontrado, vale o canvas ativo."""
@@ -312,7 +332,7 @@ class Contas:
     def __init__(self, mapa, raiz_do_maestri=None, coletor=None, leitor_de_processos=None, casas=None):
         self.mapa = mapa
         self.descoberta = DescobertaDoCanvas(mapa.get("workspace"), raiz_do_maestri,
-                                             leitor_de_processos or discovery.read_processes)
+                                             leitor_de_processos or ler_processos)
         self.painel = backend.Dashboard(self.descoberta.workspace, self.descoberta,
                                         collector=coletor or coletor_do_painel,
                                         preferences_path=RAIZ / "cotas" / "preferences.json")

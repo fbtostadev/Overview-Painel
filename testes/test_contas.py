@@ -285,6 +285,24 @@ class MesmaCasa(unittest.TestCase):
         self.assertEqual(len(contas.juntar_terminais_da_mesma_casa(lista)), 2)
 
 
+class SemDaemons(unittest.TestCase):
+    def test_daemon_antigo_nao_dobra_a_identidade_do_terminal(self):
+        def p(pid, home):
+            return {"pid": pid, "harness": "codex", "env": {"MAESTRI_TERMINAL_ID": "T67", "CODEX_HOME": home}}
+        leitura = [p(10, "/h/codex-2"), p(11, "/h/conta-2")]
+        terminal = {"id": "T67", "name": "67", "status": "running", "agentType": "custom", "command": "codex"}
+        antes = contas.discovery.discover_accounts([terminal], leitura)
+        self.assertIsNone(antes[0].account_dir, "com o daemon, são duas identidades e a conta some")
+        depois = contas.discovery.discover_accounts([terminal], contas.ler_processos(lambda: leitura, lambda: {10}))
+        self.assertEqual(depois[0].account_dir, "/h/conta-2")
+
+    def test_sem_conseguir_listar_os_daemons_vale_a_leitura_inteira(self):
+        def falha():
+            raise OSError("ps")
+        leitura = [{"pid": 1, "harness": "codex", "env": {}}]
+        self.assertEqual(contas.ler_processos(lambda: leitura, falha), leitura)
+
+
 class Casas(unittest.TestCase):
     """A consulta por casa do Antigravity, com um consultor falso: nenhum teste roda o agy."""
 

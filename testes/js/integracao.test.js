@@ -71,3 +71,11 @@ test('o card consome o contrato do painel: grupo_rotulo e provisorio vêm de lib
   assert.match(cotas, /grupo_rotulo/);
   assert.match(ler('prazo.js'), /b\.provisorio/);
 });
+
+test('as contas do Antigravity vão num grupo só (com mais de uma), e a grade externa deixa a altura do grupo livre', () => {
+  assert.match(cotas, /filter\(function \(c\) \{ return c\.ferramenta === "agy"; \}\)\.length > 1/);
+  assert.match(cotas, /className = "contas-grupo"/);
+  assert.match(cotas, /texto\(grupoAgy\.qtd, noGrupo\.length \+ " contas"\)/);
+  assert.match(css, /\.contas-grupo \{ grid-column: 1 \/ -1;/);
+  assert.match(css, /#contas-grade \{ grid-auto-rows: auto; \}\n\.card-slot \{ height: 280px; \}/);
+});
