@@ -41,9 +41,30 @@ NOME = {"codex": "Codex", "claude": "Claude Code", "antigravity": "Antigravity"}
 INTERVALOS = dict(backend.INTERVALS)           # segundos entre consultas, por harness
 POOL_DO_SUFIXO = (("Gemini", "gemini"), ("Claude/GPT", "3p"))    # grupo do painel -> pool do Antigravity
 JANELA_MIN = {"5h": 300, "semana": 10080}
+PROVISORIA_FOLGA_S = 60                        # folga, em segundos, para dizer que o período ainda não começou
 
 
 # ---------------------------------------------------------------- descoberta
+
+def _pids_de_daemons():
+    """Pids dos `codex app-server daemon`: processos de apoio que ficam no ambiente em que subiram (o CODEX_HOME de
+    uma conta antiga, por exemplo) e não são a CLI que o terminal usa agora."""
+    saida = subprocess.run(["/bin/ps", "-axo", "pid=,comm="], stdout=subprocess.PIPE, universal_newlines=True,
+                           check=True, timeout=10).stdout
+    return {int(p) for p, _, comando in (l.strip().partition(" ") for l in saida.splitlines())
+            if p.isdigit() and "/app-server-daemon/" in comando}
+
+
+def ler_processos(leitor=discovery.read_processes, daemons=_pids_de_daemons):
+    """Os processos das CLIs, sem os daemons do Codex. Num terminal em que a conta do Codex mudou, o daemon velho
+    e a CLI nova davam duas identidades, a descoberta desistia e o card da conta sumia."""
+    processos = leitor()
+    try:
+        fora = daemons()
+    except (OSError, subprocess.SubprocessError, ValueError):
+        return processos
+    return [p for p in processos if p["pid"] not in fora]
+
 
 class DescobertaDoCanvas(discovery.MaestriDiscovery):
     """Os terminais do canvas com o nome do mapa, e não o canvas ativo: o dono do painel alterna entre canvases
@@ -311,7 +332,7 @@ class Contas:
     def __init__(self, mapa, raiz_do_maestri=None, coletor=None, leitor_de_processos=None, casas=None):
         self.mapa = mapa
         self.descoberta = DescobertaDoCanvas(mapa.get("workspace"), raiz_do_maestri,
-                                             leitor_de_processos or discovery.read_processes)
+                                             leitor_de_processos or ler_processos)
         self.painel = backend.Dashboard(self.descoberta.workspace, self.descoberta,
                                         collector=coletor or coletor_do_painel,
                                         preferences_path=RAIZ / "cotas" / "preferences.json")
@@ -354,6 +375,18 @@ def pct(janela):
 def base_do_grupo(grupo):
     """'k@example.com · Gemini' -> 'k@example.com'; 'Claude Max 5x' fica como está."""
     return grupo.rsplit(" · ", 1)[0] if " · " in grupo else grupo
+
+
+def janela_provisoria(usado_pct, renova_epoch, lido_em_epoch, janela_min):
+    """True quando o período ainda não começou: uso zero e hora de renovar colada em "leitura + duração".
+
+    Sem uso, a CLI não tem um período de verdade e só projeta um a partir de agora; o card mostra "Ainda sem uso"
+    em vez de um relógio que não existe. É o mesmo critério do quota-board em Node (provisional, em board.js)."""
+    if usado_pct != 0 or isinstance(usado_pct, bool):
+        return False
+    if not isinstance(renova_epoch, (int, float)) or not isinstance(lido_em_epoch, (int, float)):
+        return False
+    return abs(renova_epoch - (lido_em_epoch + janela_min * 60)) <= PROVISORIA_FOLGA_S
 
 
 def vingadores_da_conta(conta, mapa):
@@ -470,6 +503,7 @@ def cartoes(foto, mapa, grupos_do_painel, agora):
         janelas = janelas_da_conta(conta, mapa)
         observado = conta.get("observed_at") if isinstance(conta.get("observed_at"), (int, float)) else None
         barras = []
+        sem_rotulo = [g for g, jj in janelas.items() if not jj["rotulo"]]
         for grupo, j in janelas.items():
             g = grupos_do_painel.get(grupo) if isinstance(grupos_do_painel, dict) else None
             g = g if isinstance(g, dict) else {}
@@ -479,6 +513,8 @@ def cartoes(foto, mapa, grupos_do_painel, agora):
                 janela = j.get(tipo)
                 campo = "sessao_5h_pct" if tipo == "5h" else "semanal_pct"
                 barra = {"grupo": grupo, "tipo": tipo,
+                         # a aba do card: "Gemini", "Claude/GPT", o modelo da semanal própria; vazio no grupo principal
+                         "grupo_rotulo": j["rotulo"] or (grupo if len(sem_rotulo) > 1 else ""),
                          "rotulo": ("5h" if tipo == "5h" else "Semana") + (" · " + j["rotulo"] if j["rotulo"] else ""),
                          "usado_pct": None, "renova_epoch": None, "janela_min": JANELA_MIN[tipo],
                          "origem": None, "evidencia": None, "lido_em_epoch": None, "fonte": None,
@@ -493,6 +529,7 @@ def cartoes(foto, mapa, grupos_do_painel, agora):
                 if renova is None:
                     renova = g.get("renova_sessao_epoch" if tipo == "5h" else "renova_semanal_epoch")
                 barra["renova_epoch"] = renova if isinstance(renova, (int, float)) else None
+                barra["provisorio"] = janela_provisoria(barra["usado_pct"], barra["renova_epoch"], barra["lido_em_epoch"], barra["janela_min"])
                 barras.append(barra)
         titulo = base_do_grupo(next(iter(janelas))) if janelas else NOME.get(harness, "conta")
         lista.append({
