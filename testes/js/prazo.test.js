@@ -140,3 +140,12 @@ test('o corte da agulha: a faixa do percentual decorrido, travada nas pontas', (
   assert.equal(Prazo.corteAtual(100, 5), 4, 'no fim fica no último corte');
   assert.equal(Prazo.corteAtual(null, 5), -1, 'sem tempo, nenhum corte é o atual');
 });
+
+test('a régua de tempo é obrigatória: o tempo vem do relógio, mesmo com a leitura de uso velha ou ausente', () => {
+  const velha = Prazo.descrever(janela(38, 30), AGORA, { ...FUSO, velha: true });
+  assert.equal(Math.round(velha.tempo), 30);
+  assert.equal(velha.termina, 'O período de 5 horas termina em 3 h 30 min');
+  assert.equal(velha.prazo, 'Ainda não sabemos até quando dura', 'sem estimativa com uso velho');
+  assert.equal(Math.round(Prazo.descrever(janela(null, 30), AGORA, FUSO).tempo), 30, 'sem dado de uso');
+  assert.equal(Prazo.descrever(janela(0, 0, { provisorio: true }), AGORA, { ...FUSO, velha: true }).tempo, null, 'prazo provisório não vira tempo');
+});

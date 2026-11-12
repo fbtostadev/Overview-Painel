@@ -86,3 +86,11 @@ test('a tarja só é desenhada com o card no DOM: fora dele a cor computada é v
   assert.ok(depoisDeDesenharOsCards > 0);
   assert.match(cotas.slice(depoisDeDesenharOsCards, depoisDeDesenharOsCards + 400), /identidade\(cards\[id\]\)/, 'identidade roda de novo com os cards já posicionados');
 });
+
+test('a régua de tempo nunca é escondida: sem tempo ela fica vazia, sem agulha nem decorrido', () => {
+  assert.match(cotas, /<div class="regua">/);
+  assert.match(cotas, /<span class="tempo-nome">Tempo<\/span>/);
+  assert.doesNotMatch(cotas, /oculto\(barra\.(regua|nomeTempo)|regua\.hidden|sem-regua/);
+  assert.doesNotMatch(css, /sem-regua|\.regua\[hidden\]/);
+  assert.match(css, /\.visual\.sem-tempo \.agulha, \.visual\.sem-tempo \.decorrido \{ display: none; \}/);
+});
