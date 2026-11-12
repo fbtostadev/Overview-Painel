@@ -16,6 +16,9 @@ mostra.
 - Cada barra do card é uma **cápsula**: o uso (na cor da ferramenta) e, ao lado, uma faixa fina com o tempo já decorrido do
   período. Quando o tempo passa do uso, as duas faixas trocam de lugar (e o rótulo "Tempo" vai junto). Ao passar o mouse ou
   focar a barra pelo teclado, aparecem a hora (5 horas) ou o dia (Semana) de cada corte e o tempo decorrido.
+  A faixa de tempo (a régua de horas) aparece sempre. O tempo vem do relógio e da hora de renovar, então ela continua
+  certa com a leitura de uso velha. Sem período conhecido (período já renovado, sem hora de renovar ou prazo
+  provisório) ela aparece vazia, com os cortes e sem agulha.
 
 ## Como usar
 
