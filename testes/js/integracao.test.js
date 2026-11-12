@@ -79,3 +79,10 @@ test('as contas do Antigravity vão num grupo só (com mais de uma), e a grade e
   assert.match(css, /\.contas-grupo \{ grid-column: 1 \/ -1;/);
   assert.match(css, /#contas-grade \{ grid-auto-rows: auto; \}\n\.card-slot \{ height: 280px; \}/);
 });
+
+test('a tarja só é desenhada com o card no DOM: fora dele a cor computada é vazia e o canvas pintaria de preto', () => {
+  assert.match(cotas, /if \(privado && email && !no\.isConnected\) \{ no\._assinatura = null; no\.textContent = ""; return; \}/);
+  const depoisDeDesenharOsCards = cotas.indexOf('posicionar(grupoAgy.grade, noGrupo)');
+  assert.ok(depoisDeDesenharOsCards > 0);
+  assert.match(cotas.slice(depoisDeDesenharOsCards, depoisDeDesenharOsCards + 400), /identidade\(cards\[id\]\)/, 'identidade roda de novo com os cards já posicionados');
+});

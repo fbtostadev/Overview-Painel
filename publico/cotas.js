@@ -228,6 +228,9 @@ function bloco(estilo, quantidade) {
   return no;
 }
 function escreverEmail(no, email, sufixo) {
+  /* Fora do DOM a cor computada vem vazia e o canvas pintaria o bloco de preto: o card novo só desenha a tarja depois de entrar
+     na página (desenhar() chama identidade de novo ao posicionar os cards). */
+  if (privado && email && !no.isConnected) { no._assinatura = null; no.textContent = ""; return; }
   var estilo = privado && email ? getComputedStyle(no) : null;
   var assinatura = [privado, email, sufixo, estilo && estilo.color, estilo && estilo.fontSize, estilo && estilo.fontFamily, estilo && estilo.fontWeight].join("|");
   if (no._assinatura === assinatura) return;
@@ -504,6 +507,7 @@ function desenhar(contas, agoraS) {
     });
     posicionar(grade, naGrade);
     if (grupoAgy) { posicionar(grupoAgy.grade, noGrupo); texto(grupoAgy.qtd, noGrupo.length + " contas"); }
+    Object.keys(cards).forEach(function (id) { identidade(cards[id]); });     /* agora no DOM: a cor do texto existe */
     var mensagem = "";
     if (!contas.consultadas) mensagem = "A consulta às CLIs está desligada (coletor --sem-contas): as cotas vêm só das status lines.";
     else if (!lista.length) mensagem = "Nenhuma conta em execução no canvas" + (contas.canvas ? " " + contas.canvas : "") + ".";
